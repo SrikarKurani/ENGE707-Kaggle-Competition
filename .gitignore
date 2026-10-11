@@ -1,0 +1,20 @@
+# Data (Kaggle rules)
+data/
+*.zip
+
+# Model weights and large outputs
+outputs/models/
+*.pt
+*.pth
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
