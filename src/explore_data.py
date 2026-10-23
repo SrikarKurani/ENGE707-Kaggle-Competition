@@ -21,10 +21,9 @@ from PIL import Image
 # Add src/ to the Python path so config.py can be imported when
 # the script is run from the main project folder.
 sys.path.append(str(Path(__file__).resolve().parent))
-from config import CLASSES, FIG_DIR, IMG_EXTS, OUTPUT_DIR, SEED, TEST_DIR, TRAIN_DIR  # noqa: E402
-
-# Set this to a CSV file if the image labels are stored in a separate file.
-LABELS_CSV = None
+from config import CLASSES, DATA_DIR, FIG_DIR, IMG_EXTS, OUTPUT_DIR, SEED, TEST_DIR, TRAIN_DIR  
+# The Kaggle data stores the class of each training image in this CSV file.
+LABELS_CSV = DATA_DIR / "train_labels.csv"
 
 
 def list_images(folder: Path):
@@ -34,14 +33,24 @@ def list_images(folder: Path):
 
 def build_index() -> pd.DataFrame:
     """Create a table containing the path and label for each training image."""
-    if LABELS_CSV is not None:
-        df = pd.read_csv(LABELS_CSV)
-        df["path"] = df["filename"].apply(lambda f: str(TRAIN_DIR / f))
-        return df[["path", "label"]]
+    labels = pd.read_csv(LABELS_CSV, dtype=str)
 
-    # Use the parent folder name as the image label.
-    rows = [{"path": str(p), "label": p.parent.name} for p in list_images(TRAIN_DIR)]
-    return pd.DataFrame(rows)
+    # Check whether the csv is missing its header row. 
+    if labels.columns[1].strip() in CLASSES:
+        labels = pd.read_csv(LABELS_CSV, dtype=str, header=None)
+    labels.columns = ["image_id", "label"]
+    labels["label"] = labels.label.str.strip()
+
+    # Convert image IDs to numbers so they can match filenames with leading zeros.
+    files = {int(p.stem): str(p) for p in list_images(TRAIN_DIR) if p.stem.isdigit()}
+    labels["path"] = labels.image_id.astype(int).map(files)
+
+    # Warning for any labelled images that cannot be found in the training folder.
+    missing = int(labels.path.isna().sum())
+    if missing:
+        print(f"WARNING: {missing} labelled ids have no matching image file")
+    # Keep only rows with a matching image, and return the required columns.
+    return labels.dropna(subset=["path"])[["path", "label"]].reset_index(drop=True)
 
 
 def inspect_image(path: str) -> dict:
