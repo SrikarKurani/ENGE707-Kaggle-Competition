@@ -18,3 +18,5 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+# Local per-image report from explore_data.py (large, contains local paths)
+outputs/data_report.csv
